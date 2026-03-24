@@ -2,16 +2,40 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <meta name="theme-color" content="#0a0a1a" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Fitness" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
     <link rel="icon" type="image/png" href="/icon-192.png" />
-    <title>Prashanth's Fitness Tracker</title>
+    <!-- iOS splash screens -->
+    <link rel="apple-touch-startup-image" href="/icon-512.png" />
+    <title>Fitness</title>
     <style>
-      body { background: #0a0a1a; margin: 0; }
+      /* Prevent FOUC + iOS overscroll */
+      html, body {
+        background: #0a0a1a;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        height: 100%;
+        width: 100%;
+        position: fixed;
+        -webkit-overflow-scrolling: touch;
+      }
+      #root {
+        height: 100%;
+        overflow: hidden;
+      }
+      /* Prevent text selection on UI elements */
+      button, nav, header, .checkbox-row, .nav-tab, .cal-day, .day-breakdown-row {
+        -webkit-user-select: none;
+        user-select: none;
+      }
     </style>
   </head>
   <body>

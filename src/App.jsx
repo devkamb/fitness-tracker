@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { addDays, subDays } from 'date-fns';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { addDays, subDays, format } from 'date-fns';
 import { getAllData } from './utils/storage';
 import { getStreakCount, formatDate } from './utils/helpers';
 import BottomNav from './components/BottomNav';
@@ -16,13 +16,15 @@ function App() {
   const [activeTab, setActiveTab] = useState('today');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [streak, setStreak] = useState(0);
+  const [slideDir, setSlideDir] = useState(null);
+  const touchStartX = useRef(null);
+  const mainRef = useRef(null);
 
   useEffect(() => {
     loadStreak();
     scheduleNotifications();
   }, []);
 
-  // Reload streak when switching to today tab
   useEffect(() => {
     if (activeTab === 'today') loadStreak();
   }, [activeTab, currentDate]);
@@ -54,9 +56,29 @@ function App() {
     });
   }
 
-  function handleDateNav(dir) {
-    setCurrentDate((d) => dir === 'next' ? addDays(d, 1) : subDays(d, 1));
-  }
+  const navigateDate = useCallback((dir) => {
+    setSlideDir(dir);
+    setTimeout(() => {
+      setCurrentDate((d) => dir === 'next' ? addDays(d, 1) : subDays(d, 1));
+      setSlideDir(null);
+    }, 150);
+  }, []);
+
+  // Swipe gestures for date navigation
+  const handleTouchStart = useCallback((e) => {
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback((e) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) > 60) {
+      navigateDate(dx < 0 ? 'next' : 'prev');
+    }
+    touchStartX.current = null;
+  }, [navigateDate]);
+
+  const isToday = formatDate(currentDate) === formatDate(new Date());
 
   if (!authed) {
     return <LoginScreen onLogin={() => setAuthed(true)} />;
@@ -65,27 +87,35 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <button className="btn-icon" onClick={() => handleDateNav('prev')}>&larr;</button>
-        <button className="btn-icon today-btn" onClick={() => setCurrentDate(new Date())}>Today</button>
-        <button className="btn-icon" onClick={() => handleDateNav('next')}>&rarr;</button>
+        <button className="header-arrow" onClick={() => navigateDate('prev')}>
+          <svg width="10" height="18" viewBox="0 0 10 18" fill="none"><path d="M9 1L1 9L9 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+        <div className="header-center">
+          <span className="header-date">{format(currentDate, 'EEE, MMM d')}</span>
+          {!isToday && (
+            <button className="header-today-pill" onClick={() => setCurrentDate(new Date())}>
+              Back to Today
+            </button>
+          )}
+        </div>
+        <button className="header-arrow" onClick={() => navigateDate('next')}>
+          <svg width="10" height="18" viewBox="0 0 10 18" fill="none"><path d="M1 1L9 9L1 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
       </header>
 
-      <main className="app-main">
+      <main
+        ref={mainRef}
+        className={`app-main ${slideDir === 'next' ? 'slide-left' : slideDir === 'prev' ? 'slide-right' : ''}`}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {activeTab === 'today' && (
-          <TodayPage
-            date={currentDate}
-            streak={streak}
-            onNavigateWorkout={() => setActiveTab('workout')}
-          />
+          <TodayPage date={currentDate} streak={streak} onNavigateWorkout={() => setActiveTab('workout')} />
         )}
         {activeTab === 'workout' && <WorkoutPage date={currentDate} />}
         {activeTab === 'progress' && <ProgressPage date={currentDate} />}
         {activeTab === 'week' && (
-          <WeekPage
-            date={currentDate}
-            streak={streak}
-            onSelectDay={(d) => { setCurrentDate(d); setActiveTab('today'); }}
-          />
+          <WeekPage date={currentDate} streak={streak} onSelectDay={(d) => { setCurrentDate(d); setActiveTab('today'); }} />
         )}
         {activeTab === 'settings' && (
           <SettingsPage onLogout={() => { localStorage.removeItem('ft_auth'); setAuthed(false); }} />
