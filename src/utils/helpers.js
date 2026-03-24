@@ -1,5 +1,5 @@
 import { format, parseISO, startOfWeek, endOfWeek, eachDayOfInterval, differenceInDays, getDay, isWithinInterval } from 'date-fns';
-import { USER, WORKOUTS, MEALS } from './constants';
+import { USER, WORKOUTS, DAILY_SCHEDULES, PROGRESS_PHOTO_DATES } from './constants';
 
 export function formatDate(date) {
   return format(typeof date === 'string' ? parseISO(date) : date, 'yyyy-MM-dd');
@@ -25,23 +25,16 @@ export function getWorkoutForDay(dateStr) {
 }
 
 export function isSaturday(dateStr) {
-  const d = parseISO(dateStr);
-  return getDay(d) === 6;
+  return getDay(parseISO(dateStr)) === 6;
 }
 
 export function isSunday(dateStr) {
-  const d = parseISO(dateStr);
-  return getDay(d) === 0;
+  return getDay(parseISO(dateStr)) === 0;
 }
 
-export function getMealsForDay(dateStr) {
-  const sat = isSaturday(dateStr);
-  return [
-    MEALS.meal1,
-    MEALS.meal2,
-    sat ? MEALS.meal3_saturday : MEALS.meal3_weekday,
-    MEALS.meal4,
-  ];
+export function getScheduleForDay(dateStr) {
+  const day = getDayOfWeek(dateStr);
+  return DAILY_SCHEDULES[day] || [];
 }
 
 export function getWeekNumber(dateStr) {
@@ -64,6 +57,10 @@ export function isWeighDay(dateStr) {
   return ['monday', 'wednesday', 'friday'].includes(day);
 }
 
+export function isProgressPhotoDay(dateStr) {
+  return PROGRESS_PHOTO_DATES.includes(dateStr);
+}
+
 export function getStreakCount(allDays) {
   if (!allDays || allDays.length === 0) return 0;
   const sorted = [...allDays]
@@ -71,9 +68,7 @@ export function getStreakCount(allDays) {
     .map(d => d.id)
     .sort()
     .reverse();
-
   if (sorted.length === 0) return 0;
-
   let streak = 1;
   for (let i = 0; i < sorted.length - 1; i++) {
     const diff = differenceInDays(parseISO(sorted[i]), parseISO(sorted[i + 1]));
@@ -83,16 +78,50 @@ export function getStreakCount(allDays) {
   return streak;
 }
 
-export function isInProgramRange(dateStr) {
-  const d = parseISO(dateStr);
-  const start = parseISO(USER.startDate);
-  const end = parseISO(USER.endDate);
-  return isWithinInterval(d, { start, end });
+// Parse "6:35 AM" into minutes since midnight
+export function parseTimeToMinutes(timeStr) {
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return 0;
+  let h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  const ampm = match[3].toUpperCase();
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return h * 60 + m;
+}
+
+// Get time status for a task: 'past', 'current', 'upcoming', 'future'
+export function getTimeStatus(taskTime, dateStr) {
+  const now = new Date();
+  const today = formatDate(now);
+  if (dateStr !== today) return 'future'; // not today, no highlighting
+
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const taskMins = parseTimeToMinutes(taskTime);
+
+  if (nowMins >= taskMins + 30) return 'past';
+  if (nowMins >= taskMins - 30 && nowMins < taskMins) return 'upcoming';
+  if (nowMins >= taskMins && nowMins < taskMins + 30) return 'current';
+  return 'future';
+}
+
+// Calculate totals from checked tasks in the schedule
+export function calcMacrosFromChecked(schedule, checked) {
+  let calories = 0;
+  let protein = 0;
+  schedule.forEach(t => {
+    if (t.cat === 'meal' && checked[t.id] && t.calories) {
+      calories += t.calories;
+      protein += (t.protein || 0);
+    }
+  });
+  return { calories, protein };
 }
 
 export function getDayData(dateStr) {
   return {
     id: dateStr,
+    checked: {},           // taskId -> boolean (for the full schedule)
     meals: { meal1: false, meal2: false, meal3: false, meal4: false },
     supplements: { multivitamin: false, calcium: false },
     morningRoutine: {},

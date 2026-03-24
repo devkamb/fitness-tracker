@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getData, setData } from '../utils/storage';
-import { getDayData, getMealsForDay, isSaturday } from '../utils/helpers';
+import { getDayData, getScheduleForDay, isSaturday, calcMacrosFromChecked } from '../utils/helpers';
 
 export function useDay(dateStr) {
   const [day, setDay] = useState(null);
@@ -21,7 +21,7 @@ export function useDay(dateStr) {
   const updateDay = useCallback(async (updater) => {
     setDay((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
-      // Calculate allComplete
+      // Derive allComplete: all meals, supplements, steps, bedtime
       const meals = Object.values(next.meals);
       const allMeals = meals.every(Boolean);
       const supps = Object.values(next.supplements);
@@ -33,25 +33,32 @@ export function useDay(dateStr) {
     });
   }, []);
 
-  const toggleMeal = useCallback((mealId) => {
+  const toggleTask = useCallback((taskId) => {
     updateDay((prev) => ({
       ...prev,
-      meals: { ...prev.meals, [mealId]: !prev.meals[mealId] },
+      checked: { ...prev.checked, [taskId]: !prev.checked[taskId] },
     }));
   }, [updateDay]);
 
-  const toggleSupplement = useCallback((suppId) => {
-    updateDay((prev) => ({
-      ...prev,
-      supplements: { ...prev.supplements, [suppId]: !prev.supplements[suppId] },
-    }));
-  }, [updateDay]);
-
-  const toggleRoutine = useCallback((routineId) => {
-    updateDay((prev) => ({
-      ...prev,
-      morningRoutine: { ...prev.morningRoutine, [routineId]: !prev.morningRoutine[routineId] },
-    }));
+  // Also keep the meal/supplement tracking in sync for backward compat + weekly stats
+  const toggleTaskWithSync = useCallback((task) => {
+    updateDay((prev) => {
+      const newChecked = { ...prev.checked, [task.id]: !prev.checked[task.id] };
+      const updates = { checked: newChecked };
+      // Sync meals
+      if (task.mealId) {
+        updates.meals = { ...prev.meals, [task.mealId]: !prev.checked[task.id] };
+      }
+      // Sync supplements
+      if (task.cat === 'supplement') {
+        updates.supplements = {
+          ...prev.supplements,
+          multivitamin: !prev.checked[task.id],
+          calcium: !prev.checked[task.id],
+        };
+      }
+      return { ...prev, ...updates };
+    });
   }, [updateDay]);
 
   const toggleSteps = useCallback(() => {
@@ -71,49 +78,34 @@ export function useDay(dateStr) {
 
   const getCalories = useCallback(() => {
     if (!day) return { consumed: 0, target: 0 };
-    const meals = getMealsForDay(dateStr);
-    let consumed = 0;
-    meals.forEach((meal) => {
-      if (day.meals[meal.id]) {
-        if (meal.calories !== null) {
-          consumed += meal.calories;
-        } else if (day.meal3Manual.calories) {
-          consumed += Number(day.meal3Manual.calories) || 0;
-        }
-      }
-    });
+    const schedule = getScheduleForDay(dateStr);
+    const { calories } = calcMacrosFromChecked(schedule, day.checked);
+    // Add manual Saturday entry
+    let manual = 0;
+    if (isSaturday(dateStr) && day.meal3Manual.calories && day.checked.meal3_date) {
+      manual = Number(day.meal3Manual.calories) || 0;
+    }
     const sat = isSaturday(dateStr);
-    const target = sat ? 3000 : 2028;
-    return { consumed, target };
+    return { consumed: calories + manual, target: sat ? 3000 : 2028 };
   }, [day, dateStr]);
 
   const getProtein = useCallback(() => {
     if (!day) return { consumed: 0, target: 227 };
-    const meals = getMealsForDay(dateStr);
-    let consumed = 0;
-    meals.forEach((meal) => {
-      if (day.meals[meal.id]) {
-        if (meal.protein !== null) {
-          consumed += meal.protein;
-        } else if (day.meal3Manual.protein) {
-          consumed += Number(day.meal3Manual.protein) || 0;
-        }
-      }
-    });
-    return { consumed, target: 227 };
+    const schedule = getScheduleForDay(dateStr);
+    const { protein } = calcMacrosFromChecked(schedule, day.checked);
+    let manual = 0;
+    if (isSaturday(dateStr) && day.meal3Manual.protein && day.checked.meal3_date) {
+      manual = Number(day.meal3Manual.protein) || 0;
+    }
+    return { consumed: protein + manual, target: 227 };
   }, [day, dateStr]);
 
   return {
-    day,
-    loading,
-    toggleMeal,
-    toggleSupplement,
-    toggleRoutine,
-    toggleSteps,
-    toggleBedtime,
+    day, loading,
+    toggleTask, toggleTaskWithSync,
+    toggleSteps, toggleBedtime,
     setMeal3Manual,
-    getCalories,
-    getProtein,
+    getCalories, getProtein,
     updateDay,
   };
 }
