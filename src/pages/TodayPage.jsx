@@ -17,7 +17,7 @@ const CAT_STYLE = {
 
 export default function TodayPage({ date, streak, onNavigateWorkout }) {
   const dateStr = formatDate(date);
-  const { day, loading, toggleTaskWithSync, toggleSteps, toggleBedtime, setMeal3Manual, getCalories, getProtein } = useDay(dateStr);
+  const { day, loading, toggleTaskWithSync, toggleSteps, setStepCount, toggleBedtime, setMeal3Manual, getCalories, getProtein } = useDay(dateStr);
 
   if (loading || !day) return <div className="loading">Loading...</div>;
 
@@ -168,13 +168,31 @@ export default function TodayPage({ date, streak, onNavigateWorkout }) {
       {/* Bottom Goals */}
       <div className="card" style={{ marginTop: 12 }}>
         <h3>DAILY GOALS</h3>
-        <button className={`schedule-row ${day.steps ? 'srow-done' : ''}`} onClick={toggleSteps}>
-          <span className="srow-time">{'\uD83D\uDEB6'}</span>
-          <span className={`srow-check ${day.steps ? 'srow-checked' : ''}`}>
-            {day.steps ? '\u2713' : ''}
-          </span>
-          <span className="srow-content"><span className="srow-task">10,000 steps completed</span></span>
-        </button>
+
+        {/* Steps with manual input from Apple Watch */}
+        <div className="steps-goal">
+          <button className={`schedule-row ${day.steps ? 'srow-done' : ''}`} onClick={toggleSteps}>
+            <span className="srow-time">{'\uD83D\uDEB6'}</span>
+            <span className={`srow-check ${day.steps ? 'srow-checked' : ''}`}>
+              {day.steps ? '\u2713' : ''}
+            </span>
+            <span className="srow-content">
+              <span className="srow-task">10,000 steps</span>
+              {day.stepCount && <span className="srow-macros">{Number(day.stepCount).toLocaleString()} steps logged</span>}
+            </span>
+          </button>
+          <div className="steps-input-row">
+            <input
+              type="number"
+              inputMode="numeric"
+              placeholder="Enter steps from Apple Watch"
+              value={day.stepCount || ''}
+              onChange={(e) => setStepCount(e.target.value)}
+              className="input-steps"
+            />
+          </div>
+        </div>
+
         <button className={`schedule-row ${day.bedtime ? 'srow-done' : ''}`} onClick={toggleBedtime}>
           <span className="srow-time">{'\uD83C\uDF19'}</span>
           <span className={`srow-check ${day.bedtime ? 'srow-checked' : ''}`}>

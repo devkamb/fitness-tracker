@@ -1440,7 +1440,94 @@ input, button, textarea {
   margin-bottom: 10px;
 }
 
-.btn-workout:active {
-  opacity: 0.8;
-  transform: scale(0.98);
+/* ==============================
+   Steps Input
+   ============================== */
+.steps-goal {
+  border-bottom: 0.5px solid var(--separator);
+  padding-bottom: 6px;
+}
+
+.steps-input-row {
+  padding: 6px 14px 10px 46px;
+}
+
+.input-steps {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: none;
+  border-radius: 8px;
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 15px;
+  outline: none;
+}
+
+.input-steps:focus {
+  box-shadow: 0 0 0 2px var(--tint);
+}
+
+.input-steps::placeholder {
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+/* ==============================
+   Notification Settings
+   ============================== */
+.notif-warning {
+  padding: 10px 12px;
+  background: var(--orange-bg);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.notif-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 44px;
+  font-size: 17px;
+}
+
+.notif-badge {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+}
+
+.notif-badge.notif-on {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.reminder-list {
+  margin-top: 12px;
+}
+
+.reminder-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 36px;
+  font-size: 15px;
+  border-bottom: 0.5px solid var(--separator);
+  padding: 6px 0;
+}
+
+.reminder-row:last-child {
+  border-bottom: none;
+}
+
+.reminder-time {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  min-width: 64px;
+  font-variant-numeric: tabular-nums;
 }

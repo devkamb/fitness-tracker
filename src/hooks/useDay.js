@@ -65,6 +65,14 @@ export function useDay(dateStr) {
     updateDay((prev) => ({ ...prev, steps: !prev.steps }));
   }, [updateDay]);
 
+  const setStepCount = useCallback((count) => {
+    updateDay((prev) => ({
+      ...prev,
+      stepCount: count,
+      steps: Number(count) >= 10000,
+    }));
+  }, [updateDay]);
+
   const toggleBedtime = useCallback(() => {
     updateDay((prev) => ({ ...prev, bedtime: !prev.bedtime }));
   }, [updateDay]);
@@ -103,7 +111,7 @@ export function useDay(dateStr) {
   return {
     day, loading,
     toggleTask, toggleTaskWithSync,
-    toggleSteps, toggleBedtime,
+    toggleSteps, setStepCount, toggleBedtime,
     setMeal3Manual,
     getCalories, getProtein,
     updateDay,
