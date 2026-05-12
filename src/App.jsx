@@ -12,9 +12,20 @@ import ProgressPage from './pages/ProgressPage';
 import WeekPage from './pages/WeekPage';
 import SettingsPage from './pages/SettingsPage';
 import CareerPage from './pages/CareerPage';
+import CareerStandalonePage from './pages/CareerStandalonePage';
 import './App.css';
 
 function App() {
+  const isCareerOnly = window.location.hostname.includes('career2026')
+    || window.location.search.includes('careerOnly=true');
+  if (isCareerOnly) {
+    return <CareerStandalonePage />;
+  }
+
+  return <FitnessApp />;
+}
+
+function FitnessApp() {
   const [authed, setAuthed] = useState(localStorage.getItem('ft_auth') === 'true');
   const [activeTab, setActiveTab] = useState('today');
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -22,24 +33,6 @@ function App() {
   const [slideDir, setSlideDir] = useState(null);
   const touchStartX = useRef(null);
   const mainRef = useRef(null);
-
-  useEffect(() => {
-    (async () => {
-      // Update plan version marker (no data wipe - preserve all historical data)
-      if (localStorage.getItem('ft_plan_version') !== PLAN_VERSION) {
-        localStorage.setItem('ft_plan_version', PLAN_VERSION);
-      }
-      // Seed historical data from screenshots + backup
-      await seedHistoricalData();
-      await backupToLocalStorage();
-      loadStreak();
-      scheduleNotifications();
-    })();
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === 'today') loadStreak();
-  }, [activeTab, currentDate]);
 
   async function loadStreak() {
     const allDays = await getAllData('days');
@@ -69,6 +62,29 @@ function App() {
       }
     });
   }
+
+  useEffect(() => {
+    (async () => {
+      // Update plan version marker (no data wipe - preserve all historical data)
+      if (localStorage.getItem('ft_plan_version') !== PLAN_VERSION) {
+        localStorage.setItem('ft_plan_version', PLAN_VERSION);
+      }
+      // Seed historical data from screenshots + backup
+      await seedHistoricalData();
+      await backupToLocalStorage();
+      loadStreak();
+      scheduleNotifications();
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'today') return;
+    let cancelled = false;
+    getAllData('days').then((allDays) => {
+      if (!cancelled) setStreak(getStreakCount(allDays));
+    });
+    return () => { cancelled = true; };
+  }, [activeTab, currentDate]);
 
   const navigateDate = useCallback((dir) => {
     setSlideDir(dir);
