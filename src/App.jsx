@@ -11,7 +11,6 @@ import WorkoutPage from './pages/WorkoutPage';
 import ProgressPage from './pages/ProgressPage';
 import WeekPage from './pages/WeekPage';
 import SettingsPage from './pages/SettingsPage';
-import CareerPage from './pages/CareerPage';
 import CareerStandalonePage from './pages/CareerStandalonePage';
 import './App.css';
 
@@ -144,7 +143,6 @@ function FitnessApp() {
         )}
         {activeTab === 'workout' && <WorkoutPage date={currentDate} />}
         {activeTab === 'progress' && <ProgressPage date={currentDate} />}
-        {activeTab === 'career' && <CareerPage date={currentDate} />}
         {activeTab === 'week' && (
           <WeekPage date={currentDate} streak={streak} onSelectDay={(d) => { setCurrentDate(d); setActiveTab('today'); }} />
         )}
