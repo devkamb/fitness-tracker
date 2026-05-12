@@ -90,6 +90,7 @@ const DAY_PLANS = [
   ['Portfolio final pass', 'Recruiter readability, screenshots, setup, proof', 'Clean final README and pinned repo description', 'Check links from resume/LinkedIn', 'Practice project pitch'],
   ['Role broadening', 'Implementation analyst, technical support, QA analyst, product support', 'Add broader role keywords to search list', 'Apply to 40 roles', 'Prepare honest learning statement'],
   ['Emergency backup map', 'Contract roles, staffing firms, university leads, referrals', 'Build backup employer/source list', 'Send referral requests', 'Practice availability/OPT answer'],
+  ['Offer pipeline audit', 'Application tracker, recruiter responses, interview stages, follow-up timing', 'Review every application and mark status, next action, and follow-up date', 'Create a weekly pipeline dashboard with hot, warm, and cold leads', 'Practice explaining your availability, OPT timing, and strongest project proof'],
   ['Final readiness', 'End-to-end review of SQL/API/QA/automation/support', 'Redo weakest 10 questions and rerun tests', 'Write final action plan for next 30 days', 'Apply and follow up aggressively'],
 ];
 
@@ -104,7 +105,13 @@ export function getCareerDayNumber(dateStr) {
 export function getCareerPlanForDate(dateStr) {
   const dayNumber = getCareerDayNumber(dateStr);
   if (dayNumber < 1 || dayNumber > CAREER_TOTAL_DAYS) return null;
-  const [title, learn, handsOn, project, interview] = DAY_PLANS[dayNumber - 1];
+  const [title, learn, handsOn, project, interview] = DAY_PLANS[dayNumber - 1] || [
+    'Catch-up and repair',
+    'Review the weakest skill from the previous three days and rewrite notes in plain English',
+    'Redo the unfinished hands-on task until it produces visible proof',
+    'Commit the fixed artifact and update the README/application tracker',
+    'Practice explaining what was blocked, how you debugged it, and what you fixed',
+  ];
   const phase = getPhase(dayNumber);
   return {
     id: dateStr,
