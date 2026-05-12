@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const PASS = 'prashanth2026';
+const PASS = '2003';
 
 export default function LoginScreen({ onLogin }) {
   const [pin, setPin] = useState('');
@@ -27,7 +27,7 @@ export default function LoginScreen({ onLogin }) {
           <div className="login-avatar-inner">P</div>
         </div>
         <h1>Prashanth</h1>
-        <p className="login-subtitle">16-Week Transformation</p>
+        <p className="login-subtitle">16-Week Cut</p>
         <form onSubmit={handleSubmit}>
           <input
             type="password"

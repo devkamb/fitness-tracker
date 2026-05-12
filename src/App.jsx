@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { addDays, subDays, format } from 'date-fns';
-import { getAllData } from './utils/storage';
+import { getAllData, seedHistoricalData, backupToLocalStorage } from './utils/storage';
 import { getStreakCount, formatDate } from './utils/helpers';
+
+const PLAN_VERSION = '16wk-ppl-v5';
 import BottomNav from './components/BottomNav';
 import LoginScreen from './components/LoginScreen';
 import TodayPage from './pages/TodayPage';
@@ -9,6 +11,7 @@ import WorkoutPage from './pages/WorkoutPage';
 import ProgressPage from './pages/ProgressPage';
 import WeekPage from './pages/WeekPage';
 import SettingsPage from './pages/SettingsPage';
+import CareerPage from './pages/CareerPage';
 import './App.css';
 
 function App() {
@@ -21,8 +24,17 @@ function App() {
   const mainRef = useRef(null);
 
   useEffect(() => {
-    loadStreak();
-    scheduleNotifications();
+    (async () => {
+      // Update plan version marker (no data wipe - preserve all historical data)
+      if (localStorage.getItem('ft_plan_version') !== PLAN_VERSION) {
+        localStorage.setItem('ft_plan_version', PLAN_VERSION);
+      }
+      // Seed historical data from screenshots + backup
+      await seedHistoricalData();
+      await backupToLocalStorage();
+      loadStreak();
+      scheduleNotifications();
+    })();
   }, []);
 
   useEffect(() => {
@@ -37,11 +49,13 @@ function App() {
   function scheduleNotifications() {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     const times = [
-      { hour: 7, min: 35, msg: 'Time for Meal 1 + Supplements!' },
-      { hour: 12, min: 0, msg: 'Time for Meal 2!' },
-      { hour: 18, min: 0, msg: 'Time for Meal 3!' },
-      { hour: 22, min: 0, msg: 'Time for Meal 4!' },
-      { hour: 22, min: 30, msg: 'Wind down - bed in 30 min!' },
+      { hour: 6, min: 0, msg: 'Pre-workout: caffeine + citrulline + betaine' },
+      { hour: 7, min: 35, msg: 'Meal 2: 90g whey + creatine 5g' },
+      { hour: 12, min: 30, msg: 'Meal 3: 262g chicken curry + yogurt' },
+      { hour: 15, min: 0, msg: 'Meal 4: banana + PB' },
+      { hour: 18, min: 30, msg: 'Meal 5: 262g chicken curry + yogurt' },
+      { hour: 22, min: 0, msg: 'Bedtime: psyllium 20g + Zinc/Mag/Ash (16 oz water)' },
+      { hour: 22, min: 30, msg: 'Wind down \u2014 bed time!' },
     ];
     const now = new Date();
     times.forEach(({ hour, min, msg }) => {
@@ -114,6 +128,7 @@ function App() {
         )}
         {activeTab === 'workout' && <WorkoutPage date={currentDate} />}
         {activeTab === 'progress' && <ProgressPage date={currentDate} />}
+        {activeTab === 'career' && <CareerPage date={currentDate} />}
         {activeTab === 'week' && (
           <WeekPage date={currentDate} streak={streak} onSelectDay={(d) => { setCurrentDate(d); setActiveTab('today'); }} />
         )}

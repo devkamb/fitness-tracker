@@ -3,12 +3,14 @@ import { exportAll, importAll } from '../utils/storage';
 import { USER } from '../utils/constants';
 
 const REMINDER_TIMES = [
-  { key: 'meal1', hour: 7, min: 35, label: 'Meal 1 + Supplements', time: '7:35 AM' },
-  { key: 'meal2', hour: 12, min: 0, label: 'Meal 2', time: '12:00 PM' },
-  { key: 'meal3', hour: 18, min: 0, label: 'Meal 3', time: '6:00 PM' },
-  { key: 'steps', hour: 21, min: 0, label: 'Check steps (10k?)', time: '9:00 PM' },
-  { key: 'meal4', hour: 22, min: 0, label: 'Meal 4', time: '10:00 PM' },
-  { key: 'bed', hour: 22, min: 30, label: 'Wind down \u2014 bed in 30 min', time: '10:30 PM' },
+  { key: 'preworkout', hour: 6, min: 0, label: 'Pre-workout: caffeine + citrulline + betaine', time: '6:00 AM' },
+  { key: 'meal2', hour: 7, min: 35, label: 'Meal 2: 90g whey + creatine 5g', time: '7:35 AM' },
+  { key: 'meal3', hour: 12, min: 30, label: 'Meal 3: 262g chicken curry + yogurt', time: '12:30 PM' },
+  { key: 'meal4', hour: 15, min: 0, label: 'Meal 4: banana + PB 20g', time: '3:00 PM' },
+  { key: 'meal5', hour: 18, min: 30, label: 'Meal 5: 262g chicken curry + yogurt', time: '6:30 PM' },
+  { key: 'steps', hour: 21, min: 0, label: 'Check steps (15k+?)', time: '9:00 PM' },
+  { key: 'meal6', hour: 22, min: 0, label: 'Bedtime: psyllium 20g + Zinc/Mag/Ash (16 oz water)', time: '10:00 PM' },
+  { key: 'bed', hour: 22, min: 30, label: 'Wind down \u2014 bed time', time: '10:30 PM' },
 ];
 
 export default function SettingsPage({ onLogout }) {
@@ -17,12 +19,10 @@ export default function SettingsPage({ onLogout }) {
   const [isPWA, setIsPWA] = useState(false);
 
   useEffect(() => {
-    // Check if running as installed PWA
     const standalone = window.matchMedia('(display-mode: standalone)').matches
       || window.navigator.standalone === true;
     setIsPWA(standalone);
 
-    // Check notification permission
     if ('Notification' in window) {
       setNotifStatus(Notification.permission);
     } else {
@@ -62,12 +62,10 @@ export default function SettingsPage({ onLogout }) {
     const perm = await Notification.requestPermission();
     setNotifStatus(perm);
     if (perm === 'granted') {
-      // Send a test notification
       new Notification('Fitness Tracker', {
         body: 'Notifications enabled! You\'ll get meal reminders.',
         icon: '/icon-192.png',
       });
-      // Schedule today's remaining notifications
       scheduleReminders();
     }
   }
@@ -107,11 +105,18 @@ export default function SettingsPage({ onLogout }) {
         <h3>PROFILE</h3>
         <div className="profile-info">
           <div className="profile-row"><span>Name</span><span>{USER.name}</span></div>
+          <div className="profile-row"><span>Age</span><span>{USER.age}</span></div>
           <div className="profile-row"><span>Start Weight</span><span>{USER.startWeight} lbs</span></div>
           <div className="profile-row"><span>Goal Weight</span><span>{USER.goalWeight} lbs</span></div>
           <div className="profile-row"><span>Height</span><span>{USER.height}</span></div>
-          <div className="profile-row"><span>Program</span><span>{USER.startDate} to {USER.endDate}</span></div>
-          <div className="profile-row"><span>Duration</span><span>{USER.totalWeeks} weeks</span></div>
+          <div className="profile-row"><span>Body Fat</span><span>{USER.bodyFatStart}% {'\u2192'} {USER.bodyFatGoal}%</span></div>
+          <div className="profile-row"><span>Program</span><span>16-Week Cut (Push/Pull/Legs/Upper)</span></div>
+          <div className="profile-row"><span>Dates</span><span>Mar 30 {'\u2013'} Jul 20, 2026</span></div>
+          <div className="profile-row"><span>Graduation</span><span>May 15 (Week 7)</span></div>
+          <div className="profile-row"><span>Deload</span><span>May 19{'\u2013'}25 (Week 8)</span></div>
+          <div className="profile-row"><span>Refeeds</span><span>Every 5th day (Day 1, 6, 11...)</span></div>
+          <div className="profile-row"><span>Loss Rate</span><span>~3.5 lbs/week</span></div>
+          <div className="profile-row"><span>Diet</span><span>262g chicken curry + yogurt + whey + PB</span></div>
         </div>
       </div>
 
@@ -173,10 +178,6 @@ export default function SettingsPage({ onLogout }) {
         <p className="hint" style={{ marginBottom: 10 }}>
           Web apps can't connect to Apple Health directly. Enter your step count manually
           from your Apple Watch in the Daily Goals section.
-        </p>
-        <p className="hint">
-          For full HealthKit integration, this app would need to be a native iOS app.
-          That's a future upgrade if needed.
         </p>
       </div>
 

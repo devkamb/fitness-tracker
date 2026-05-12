@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getAllData } from '../utils/storage';
-import { getWeekDates, getWeekNumber, formatDate, formatDisplayDate, isWorkoutDay, getDayOfWeek } from '../utils/helpers';
+import { getWeekDates, getWeekNumber, formatDate, formatDisplayDate, isWorkoutDay, getDayOfWeek, getScheduleForDay } from '../utils/helpers';
 import { format, parseISO, startOfWeek, addWeeks, subWeeks } from 'date-fns';
 
 export default function WeekPage({ date, streak, onSelectDay }) {
@@ -46,28 +46,21 @@ export default function WeekPage({ date, streak, onSelectDay }) {
   }).length;
 
   const daysWithMealData = weekDays.filter(d => d.dayData);
+  // Per-meal estimates: training 6 meals, rest 5 meals
+  const MEAL_CAL = { meal1: 0, meal2: 360, meal3: 509, meal4: 225, meal5: 509, meal6: 70 };
+  const MEAL_PROT = { meal1: 0, meal2: 81, meal3: 77, meal4: 5, meal5: 77, meal6: 0 };
+
   const avgCalories = daysWithMealData.length > 0
     ? Math.round(daysWithMealData.reduce((sum, d) => {
         const meals = d.dayData?.meals || {};
-        // Simple estimate based on checked meals
-        let cal = 0;
-        if (meals.meal1) cal += 565;
-        if (meals.meal2) cal += 723;
-        if (meals.meal3) cal += 828;
-        if (meals.meal4) cal += 120;
-        return sum + cal;
+        return sum + Object.keys(MEAL_CAL).reduce((s, k) => s + (meals[k] ? MEAL_CAL[k] : 0), 0);
       }, 0) / daysWithMealData.length)
     : 0;
 
   const avgProtein = daysWithMealData.length > 0
     ? Math.round(daysWithMealData.reduce((sum, d) => {
         const meals = d.dayData?.meals || {};
-        let prot = 0;
-        if (meals.meal1) prot += 51;
-        if (meals.meal2) prot += 76;
-        if (meals.meal3) prot += 78;
-        if (meals.meal4) prot += 24;
-        return sum + prot;
+        return sum + Object.keys(MEAL_PROT).reduce((s, k) => s + (meals[k] ? MEAL_PROT[k] : 0), 0);
       }, 0) / daysWithMealData.length)
     : 0;
 
@@ -154,7 +147,7 @@ export default function WeekPage({ date, streak, onSelectDay }) {
               <span className="day-date">{format(parseISO(d.date), 'MMM d')}</span>
               <div className="day-indicators">
                 {isWk && <span className={`indicator ${d.workoutData ? 'ind-done' : 'ind-pending'}`}>W</span>}
-                <span className={`indicator ${mealCount === 4 ? 'ind-done' : mealCount > 0 ? 'ind-partial' : 'ind-pending'}`}>M{mealCount}/4</span>
+                <span className={`indicator ${mealCount >= (isWk ? 6 : 5) ? 'ind-done' : mealCount > 0 ? 'ind-partial' : 'ind-pending'}`}>M{mealCount}/{isWk ? 6 : 5}</span>
                 <span className={`indicator ${d.dayData?.steps ? 'ind-done' : 'ind-pending'}`}>S</span>
               </div>
               <span className={`day-status ${d.dayData?.allComplete ? 'status-done' : ''}`}>

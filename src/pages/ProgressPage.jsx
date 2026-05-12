@@ -1,15 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { getAllData, setData, deleteData } from '../utils/storage';
+import { getAllData, setDataWithBackup as setData, deleteData, getData } from '../utils/storage';
 import { USER } from '../utils/constants';
-import { formatDate, isWeighDay } from '../utils/helpers';
+import { formatDate, isWeighDay, getDaysUntilGraduation, getDaysUntilShredEnd } from '../utils/helpers';
 
 export default function ProgressPage({ date }) {
   const [weights, setWeights] = useState([]);
   const [photos, setPhotos] = useState([]);
+  const [measurements, setMeasurements] = useState(null);
   const [weightInput, setWeightInput] = useState('');
   const [tab, setTab] = useState('weight');
   const fileRef = useRef(null);
+
+  const dateStr = formatDate(date);
 
   useEffect(() => {
     loadData();
@@ -18,8 +21,10 @@ export default function ProgressPage({ date }) {
   async function loadData() {
     const w = await getAllData('weights');
     const p = await getAllData('photos');
+    const m = await getData('settings', 'measurements');
     setWeights(w.sort((a, b) => a.id.localeCompare(b.id)));
     setPhotos(p.sort((a, b) => a.id.localeCompare(b.id)));
+    setMeasurements(m || { entries: [] });
   }
 
   async function saveWeight() {
@@ -48,6 +53,23 @@ export default function ProgressPage({ date }) {
     loadData();
   }
 
+  async function saveMeasurement(field, value) {
+    const updated = { ...measurements };
+    if (!updated.entries) updated.entries = [];
+    const today = formatDate(date);
+    let entry = updated.entries.find(e => e.date === today);
+    if (!entry) {
+      entry = { date: today };
+      updated.entries.push(entry);
+    }
+    entry[field] = value;
+    updated.id = 'measurements';
+    await setData('settings', updated);
+    setMeasurements(updated);
+  }
+
+  const todayMeasurement = measurements?.entries?.find(e => e.date === dateStr) || {};
+
   const chartData = weights.map((w) => ({
     date: w.date.slice(5),
     weight: w.weight,
@@ -64,11 +86,21 @@ export default function ProgressPage({ date }) {
     return avg.toFixed(1);
   })();
 
+  const daysLeft = getDaysUntilGraduation(dateStr);
+  const daysToEnd = getDaysUntilShredEnd(dateStr);
+  const currentWeight = weights.length > 0 ? weights[weights.length - 1].weight : USER.startWeight;
+  const projectedEndWeight = totalLost > 0 && weights.length > 2
+    ? (currentWeight - (Number(totalLost) / weights.length) * daysToEnd * 0.14).toFixed(0)
+    : null;
+
   return (
     <div className="page progress-page">
       <div className="tab-bar">
         <button className={`tab ${tab === 'weight' ? 'active' : ''}`} onClick={() => setTab('weight')}>
           Weight
+        </button>
+        <button className={`tab ${tab === 'body' ? 'active' : ''}`} onClick={() => setTab('body')}>
+          Body
         </button>
         <button className={`tab ${tab === 'photos' ? 'active' : ''}`} onClick={() => setTab('photos')}>
           Photos
@@ -98,7 +130,7 @@ export default function ProgressPage({ date }) {
 
           <div className="card stats-row">
             <div className="stat">
-              <span className="stat-value">{weeklyAvg || '—'}</span>
+              <span className="stat-value">{weeklyAvg || '\u2014'}</span>
               <span className="stat-label">Weekly Avg</span>
             </div>
             <div className="stat">
@@ -110,6 +142,23 @@ export default function ProgressPage({ date }) {
               <span className="stat-label">Goal</span>
             </div>
           </div>
+
+          {/* Graduation projection */}
+          {daysToEnd > 0 && (
+            <div className="card graduation-proj">
+              {daysLeft > 0 && (
+                <div className="grad-proj-row">
+                  <span>{'\uD83C\uDF93'} Graduation in {daysLeft} days</span>
+                </div>
+              )}
+              <div className="grad-proj-row">
+                <span>{'\uD83D\uDC8E'} Shred complete in {daysToEnd} days</span>
+                {projectedEndWeight && (
+                  <span className="grad-proj-weight">Projected: ~{projectedEndWeight} lbs</span>
+                )}
+              </div>
+            </div>
+          )}
 
           {chartData.length > 1 && (
             <div className="card chart-card">
@@ -146,10 +195,53 @@ export default function ProgressPage({ date }) {
         </>
       )}
 
+      {tab === 'body' && (
+        <>
+          <div className="card">
+            <h3>Body Measurements</h3>
+            <p className="hint" style={{ marginBottom: 12 }}>Measure bi-weekly (every 2 Sundays)</p>
+            {['waist', 'chest', 'arms', 'thighs'].map(field => (
+              <div key={field} className="measurement-row">
+                <label className="measurement-label">{field.charAt(0).toUpperCase() + field.slice(1)} (in)</label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.1"
+                  placeholder="0.0"
+                  value={todayMeasurement[field] || ''}
+                  onChange={(e) => saveMeasurement(field, e.target.value)}
+                  className="input-measurement"
+                />
+              </div>
+            ))}
+          </div>
+
+          {measurements?.entries?.length > 0 && (
+            <div className="card">
+              <h3>Measurement History</h3>
+              <div className="measurement-history">
+                {[...measurements.entries].reverse().map((entry) => (
+                  <div key={entry.date} className="measurement-entry">
+                    <span className="measurement-date">{entry.date}</span>
+                    <div className="measurement-values">
+                      {entry.waist && <span>Waist: {entry.waist}"</span>}
+                      {entry.chest && <span>Chest: {entry.chest}"</span>}
+                      {entry.arms && <span>Arms: {entry.arms}"</span>}
+                      {entry.thighs && <span>Thighs: {entry.thighs}"</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
       {tab === 'photos' && (
         <>
           <div className="card">
             <h3>Progress Photos</h3>
+            <p className="hint" style={{ marginBottom: 10 }}>Front, side, back \u2014 same spot, same lighting</p>
             <button className="btn btn-primary" onClick={() => fileRef.current?.click()}>
               Upload Photo
             </button>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getData, setData } from '../utils/storage';
-import { getDayData, getScheduleForDay, isSaturday, calcMacrosFromChecked } from '../utils/helpers';
+import { getData, setDataWithBackup as setData } from '../utils/storage';
+import { getDayData, getScheduleForDay, calcMacrosFromChecked, getDayTargets } from '../utils/helpers';
 
 export function useDay(dateStr) {
   const [day, setDay] = useState(null);
@@ -21,17 +21,16 @@ export function useDay(dateStr) {
   const updateDay = useCallback(async (updater) => {
     setDay((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
-      // Derive allComplete: all meals, supplements, steps, bedtime
-      const meals = Object.values(next.meals);
-      const allMeals = meals.every(Boolean);
-      const supps = Object.values(next.supplements);
-      const allSupps = supps.every(Boolean);
-      const allComplete = allMeals && allSupps && next.steps && next.bedtime;
+      // Derive allComplete from the schedule's actual meals being checked
+      const schedule = getScheduleForDay(dateStr);
+      const mealTasks = schedule.filter(t => t.cat === 'meal');
+      const allMeals = mealTasks.length > 0 && mealTasks.every(t => next.checked[t.id]);
+      const allComplete = allMeals && next.steps && next.bedtime;
       const final = { ...next, allComplete };
       setData('days', final);
       return final;
     });
-  }, []);
+  }, [dateStr]);
 
   const toggleTask = useCallback((taskId) => {
     updateDay((prev) => ({
@@ -66,12 +65,14 @@ export function useDay(dateStr) {
   }, [updateDay]);
 
   const setStepCount = useCallback((count) => {
+    const targets = getDayTargets(dateStr);
+    const stepGoal = targets.steps || 15000;
     updateDay((prev) => ({
       ...prev,
       stepCount: count,
-      steps: Number(count) >= 10000,
+      steps: Number(count) >= stepGoal,
     }));
-  }, [updateDay]);
+  }, [updateDay, dateStr]);
 
   const toggleBedtime = useCallback(() => {
     updateDay((prev) => ({ ...prev, bedtime: !prev.bedtime }));
@@ -88,24 +89,24 @@ export function useDay(dateStr) {
     if (!day) return { consumed: 0, target: 0 };
     const schedule = getScheduleForDay(dateStr);
     const { calories } = calcMacrosFromChecked(schedule, day.checked);
-    // Add manual Saturday entry
-    let manual = 0;
-    if (isSaturday(dateStr) && day.meal3Manual.calories && day.checked.meal3_date) {
-      manual = Number(day.meal3Manual.calories) || 0;
-    }
-    const sat = isSaturday(dateStr);
-    return { consumed: calories + manual, target: sat ? 3000 : 2028 };
+    const targets = getDayTargets(dateStr);
+    return { consumed: calories, target: targets.calories };
   }, [day, dateStr]);
 
   const getProtein = useCallback(() => {
-    if (!day) return { consumed: 0, target: 227 };
+    if (!day) return { consumed: 0, target: 0 };
     const schedule = getScheduleForDay(dateStr);
     const { protein } = calcMacrosFromChecked(schedule, day.checked);
-    let manual = 0;
-    if (isSaturday(dateStr) && day.meal3Manual.protein && day.checked.meal3_date) {
-      manual = Number(day.meal3Manual.protein) || 0;
-    }
-    return { consumed: protein + manual, target: 227 };
+    const targets = getDayTargets(dateStr);
+    return { consumed: protein, target: targets.protein };
+  }, [day, dateStr]);
+
+  const getCarbs = useCallback(() => {
+    if (!day) return { consumed: 0, target: 0 };
+    const schedule = getScheduleForDay(dateStr);
+    const { carbs } = calcMacrosFromChecked(schedule, day.checked);
+    const targets = getDayTargets(dateStr);
+    return { consumed: carbs, target: targets.carbs };
   }, [day, dateStr]);
 
   return {
@@ -113,7 +114,7 @@ export function useDay(dateStr) {
     toggleTask, toggleTaskWithSync,
     toggleSteps, setStepCount, toggleBedtime,
     setMeal3Manual,
-    getCalories, getProtein,
+    getCalories, getProtein, getCarbs,
     updateDay,
   };
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getData, setData } from '../utils/storage';
+import { getData, setDataWithBackup as setData } from '../utils/storage';
 import { getWorkoutForDay } from '../utils/helpers';
 
 function createEmptyWorkout(dateStr, workout) {
